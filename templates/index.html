@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>選擇要諮商的虛擬醫事人員</title>
+  <link rel="stylesheet" href="static/style.css"/>
+  <style>
+    .chat-input-container {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+  
+    .chat-input-container input[type="text"] {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+  
+    .chat-input-container button {
+      padding: 10px 14px;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      color: white;
+    }
+  
+    #sendBtn {
+      background-color: #007bff;
+    }
+  
+    #sendBtn:hover {
+      background-color: #0056b3;
+    }
+  
+    #micBtn {
+      background-color: #28a745;
+    }
+  
+    #micBtn:hover {
+      background-color: #1e7e34;
+    }
+
+    .suggest-btn {
+        background-color: #f0f0f0;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 0.95rem;
+    }
+
+    .suggest-btn:hover {
+        background-color: #e0e0e0;
+    }
+
+    #downloadBtn {
+        background-color: #f0f0f0;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 0.95rem;
+        white-space: nowrap;
+    }
+
+    #downloadBtn {
+        background-color: #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 開啟側邊欄按鈕 -->
+    <button id="toggleSidebarBtn" class="toggle-sidebar">選擇諮商人員</button>
+
+    <aside class="sidebar hidden" id="sidebar">
+      <h2>選擇要諮商的虛擬醫事人員</h2>
+      <div class="character-list">
+        <img src="static/images/male_doctor.jpg" alt="醫生 1" class="thumbnail" onclick="selectCharacter(this.src)">
+        <b>藥劑師</b>
+        <img src="static/images/female_doctor.jpg" alt="醫生 2" class="thumbnail" onclick="selectCharacter(this.src)">
+        <b>營養師</b>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="selected-character">
+        <h2>目前選擇的醫事人員</h2>
+        <img id="selectedImg" src="static/images/male_doctor.jpg" alt="選擇的醫生">
+        <b id="selectedName"></b>
+      </div>
+
+      <div class="chat-box">
+        <h2>對話紀錄</h2>
+        <div id="chatLog" class="chat-log">
+          <div class="chat-message bot">您好！我可以為您提供什麼協助？</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="chat-input-container">
+          <input type="text" id="chatInput" placeholder="請輸入訊息..." />
+          <button id="sendBtn">📤 發送</button>
+          <button id="micBtn">🎤</button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <label style="display: flex; align-items: center;">
+            <input type="checkbox" id="responseWithAudio" style="margin-right: 0.4rem;">
+            Response with audio
+          </label>
+        
+          <button id="downloadBtn">
+            Download ChatLog
+          </button>
+        </div>
+        <div id="suggestedQuestions" style="margin-top: 20px;">
+          <h3>💡 你可以問我：</h3>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <button class="suggest-btn">{{ random_question }}</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <div id="loadingDialog" style="
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    color: white;
+    font-weight: bold;
+  ">
+    ⏳ Processing...
+  </div>
+
+  <script>
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('toggleSidebarBtn');
+    const questions = {{ questions | tojson }};
+    const suggestBtn = document.getElementsByClassName("suggest-btn")[0];
+  
+    toggleBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('hidden');
+    });
+  
+    function selectCharacter(src) {
+      let role = "unknown";
+      if (src.includes("/male_doctor")) {
+        role = "doctor";
+      } else if (src.includes("/female_doctor")) {
+        role = "nutritionist";
+      }
+      localStorage.setItem("selectedDoctor", src);
+      localStorage.setItem("selectedRole", role);
+      location.reload();
+    }
+  
+    function appendChatMessage(role, text) {
+      const msg = document.createElement("div");
+      msg.className = `chat-message ${role}`;
+      msg.innerText = text;
+      const chatLog = document.getElementById("chatLog");
+      chatLog.appendChild(msg);
+  
+      // Cuộn xuống sau khi thêm tin nhắn
+      requestAnimationFrame(() => {
+        document.getElementsByClassName("chat-box")[0].scrollTop = chatLog.scrollHeight;
+      });
+    }
+  
+    document.getElementById("sendBtn").addEventListener("click", async () => {
+      const checkbox = document.getElementById("responseWithAudio");
+      const responseWithAudio = checkbox.checked; // true nếu được tick
+      const input = document.getElementById("chatInput");
+      const text = input.value.trim();
+        
+      if (text) {
+        document.getElementById("loadingDialog").style.display = "flex";
+        appendChatMessage("user", text);
+        input.value = "";
+        const formData = new FormData();
+        formData.append("question", text);
+        const selectedRole = localStorage.getItem("selectedRole") || "unknown";
+        formData.append("role", selectedRole);
+        console.log(selectedRole)
+        formData.append("responseWithAudio", responseWithAudio);
+        const response = await fetch("/ask", {
+          method: "POST",
+          body: formData
+        });
+
+        // appendChatMessage("bot", "謝謝您，我正在分析中...");
+        // Optional: gửi về server
+        const result = await response.json();
+        appendChatMessage("bot", result.answer);
+        document.getElementById("loadingDialog").style.display = "none";
+        // console.log(result)
+        // playAmplitudes(result.audio); // ← phát lại âm thanh
+        if ("audio_base64" in result){
+            playRemoteMP3(result.audio_base64);
+        }
+      }
+    });
+  
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
+    const micBtn = document.getElementById("micBtn");
+  
+    micBtn.addEventListener("click", async () => {
+      if (!isRecording) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+  
+        mediaRecorder.ondataavailable = e => {
+          if (e.data.size > 0) {
+            audioChunks.push(e.data);
+          }
+        };
+  
+        mediaRecorder.onstop = async () => {
+          document.getElementById("loadingDialog").style.display = "flex";
+          const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+          const formData = new FormData();
+          formData.append("audio", audioBlob, "recording.wav");
+  
+          // appendChatMessage("user", "🎤（音訊已送出）");
+  
+          try {
+            const response = await fetch("/upload", {
+              method: "POST",
+              body: formData
+            });
+  
+            const result = await response.text();
+  
+            // Hiển thị kết quả và cập nhật input
+            // appendChatMessage("bot", result);
+            document.getElementById("chatInput").value = result;
+            document.getElementById("loadingDialog").style.display = "none";
+          } catch (err) {
+            appendChatMessage("bot", "❌ 錯誤：無法辨識音訊");
+            document.getElementById("loadingDialog").style.display = "none";
+          }
+        };
+  
+        mediaRecorder.start();
+        micBtn.innerText = "🛑";
+        isRecording = true;
+      } else {
+        mediaRecorder.stop();
+        micBtn.innerText = "🎤";
+        isRecording = false;
+      }
+    });
+
+    function playAmplitudes(amplitudes, sampleRate = 22050) {
+      const audioContext = new AudioContext({ sampleRate });
+      // const gainFactor = 1; // Bạn có thể chỉnh số này nếu vẫn quá nhỏ
+    
+      // Khuếch đại, nhưng đảm bảo vẫn trong [-1, 1]
+      // const normalized = amplitudes.map(v => {
+      //   let val = v * gainFactor;
+      //   return Math.max(-1, Math.min(1, val)); // clamp
+      // });
+    
+      const buffer = audioContext.createBuffer(1, amplitudes.length, sampleRate);
+      buffer.copyToChannel(new Float32Array(amplitudes), 0);
+    
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioContext.destination);
+      source.start();
+    }
+    async function playRemoteMP3(audioBase64) {
+      const baseURL = window.location.origin; // Ví dụ: "https://myweb.com"
+      const audioBlob = new Blob([new Uint8Array(atob(audioBase64).split('').map(char => char.charCodeAt(0)))], { type: 'audio/mp3' });
+    
+      const audioURL = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioURL);
+      audio.play();
+    }
+
+    function changeQuestions(){
+      let newQuestion;
+      const current = suggestBtn.textContent.trim(); // loại bỏ khoảng trắng
+    
+      // Lọc ra tất cả câu hỏi khác với câu hiện tại
+      const filtered = questions.filter(q => q.trim() !== current);
+    
+      if (filtered.length === 0) {
+        console.warn("Không còn câu hỏi khác để chọn.");
+        return;
+      }
+    
+      newQuestion = filtered[Math.floor(Math.random() * filtered.length)];
+      suggestBtn.textContent = newQuestion;
+    }
+
+      // Bắt sự kiện click cho các câu hỏi gợi ý
+  document.querySelectorAll('.suggest-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      // console.log(questions)
+      const text = btn.textContent;
+      document.getElementById("chatInput").value = text;
+      document.getElementById("sendBtn").click();
+      changeQuestions();
+    });
+  });
+    document.addEventListener("DOMContentLoaded", () => {
+      const savedDoctor = localStorage.getItem("selectedDoctor");
+      if (savedDoctor) {
+        document.getElementById('selectedImg').src = savedDoctor;
+        let nameConsultant;
+        if (savedDoctor.includes("/male_doctor")) {
+            nameConsultant = "藥劑師";
+        } else if (savedDoctor.includes("/female_doctor")) {
+            nameConsultant = "營養師";
+        }
+        document.getElementById('selectedName').textContent = nameConsultant;
+      }else{
+        selectCharacter("static/images/male_doctor.jpg")
+      }
+    });
+    document.getElementById("downloadBtn").addEventListener("click", function () {
+      const chatLog = document.getElementById("chatLog");
+    
+      const messages = Array.from(chatLog.getElementsByClassName("chat-message"))
+        .map(msg => {
+          const role = msg.classList.contains("bot") ? "Bot" : "User";
+          const content = msg.innerText || msg.textContent;
+          return `${role}: ${content}`;
+        })
+        .join("\n");
+    
+      const blob = new Blob([messages], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+    
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "chatlog.txt";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+  </script>
+</body>
+</html>
