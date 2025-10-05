@@ -1,0 +1,13 @@
+ollama
+langchain
+langchain_chroma
+langchain_ollama
+langchain_community
+faiss-gpu-cu12
+sentence-transformers
+OpenCC
+edge-tts
+openai-whisper
+flask==3.1.2
+flask-cors
+flask[async]
