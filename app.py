@@ -17,7 +17,7 @@ import time
 print("Finish import")
 myuuid = uuid.uuid4()
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all domains on all routes
+CORS(app, origins="*")  # Enable CORS for all domains on all routes
 UPLOAD_FOLDER = "temp"
 AUDIO_CLONE = "static"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
