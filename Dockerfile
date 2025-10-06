@@ -42,7 +42,7 @@ ENV OLLAMA_HOST=0.0.0.0:11434
 ENV OLLAMA_MODELS=/root/.ollama/models
 
 # Download Whisper large-v2 model
-RUN python -c "import whisper; whisper.load_model('large-v2')"
+RUN python -c "import whisper; whisper.load_model('medium')"
 
 # Download HuggingFace reranker model
 RUN python -c "from langchain_community.cross_encoders import HuggingFaceCrossEncoder; HuggingFaceCrossEncoder(model_name='BAAI/bge-reranker-v2-m3')"
