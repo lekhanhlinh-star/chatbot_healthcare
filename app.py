@@ -17,7 +17,7 @@ import time
 print("Finish import")
 myuuid = uuid.uuid4()
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "https://chatbot-healthcare-ui.vercel.app"}})
+CORS(app, resources={r"/*": {"origins": os.environ.get("CORS_ORIGINS", "https://chatbot-healthcare-ui.vercel.app")}})
 UPLOAD_FOLDER = "temp"
 AUDIO_CLONE = "static"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
