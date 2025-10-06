@@ -1,0 +1,55 @@
+FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PATH=/usr/local/cuda/bin:$PATH \
+    LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Install system dependencies in a single layer
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    default-mysql-client \
+    ffmpeg \
+    git \
+    python3-pip \
+    python3.10 \
+    python3.10-dev \
+    python3.10-venv \
+    software-properties-common \
+    ca-certificates \
+    && ln -sf python3.10 /usr/bin/python \
+    && ln -sf pip3 /usr/bin/pip \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+WORKDIR /chatbot_healthcare
+
+# Copy and install Python dependencies first (for better layer caching)
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && pip install --no-cache-dir -r requirements.txt
+
+# Install Ollama
+RUN curl -fsSL https://ollama.com/install.sh | sh
+
+# Create directories
+RUN mkdir -p /root/.ollama /chatbot_healthcare/models
+
+# Set environment variables
+ENV OLLAMA_HOST=0.0.0.0:11434 \
+    OLLAMA_MODELS=/root/.ollama/models \
+    TRANSFORMERS_CACHE=/chatbot_healthcare/models \
+    HF_HOME=/chatbot_healthcare/models
+
+# Copy application files (separate layer for better caching)
+COPY . .
+
+# Make entrypoint executable
+RUN chmod +x entrypoint.sh
+
+# Expose ports
+EXPOSE 11434 80
+
+ENTRYPOINT ["./entrypoint.sh"]

@@ -17,13 +17,13 @@ import time
 print("Finish import")
 myuuid = uuid.uuid4()
 app = Flask(__name__)
-CORS(app, origins="*")  # Enable CORS for all domains on all routes
+CORS(app, resources={r"/*": {"origins": "https://chatbot-healthcare-ui.vercel.app"}})
 UPLOAD_FOLDER = "temp"
 AUDIO_CLONE = "static"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 #init model here
 print("init model")
-asr_model = whisper.load_model("tiny")
+asr_model = whisper.load_model(r"models\whisper_large-v2\large-v2.pt")
 # device = "cuda" if torch.cuda.is_available() else "cpu"
 # tts = TTS(model_name="tts_models/zh-CN/baker/tacotron2-DDC-GST").to(device)
 cc = OpenCC('s2twp')
@@ -61,11 +61,6 @@ def load_questions():
         questions = [line.strip() for line in f if line.strip()]
     return questions
 
-@app.route("/")
-def index():
-    questions = load_questions()
-    random_question = random.choice(questions)
-    return render_template("index.html", questions=questions, random_question=random_question)
 
 @app.route("/ping")
 def ping():
