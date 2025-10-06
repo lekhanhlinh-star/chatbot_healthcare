@@ -17,7 +17,17 @@ import time
 print("Finish import")
 myuuid = uuid.uuid4()
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": os.environ.get("CORS_ORIGINS", "https://chatbot-healthcare-ui.vercel.app")}})
+
+# Configure CORS with specific settings to avoid conflicts
+cors_origins = os.environ.get("CORS_ORIGINS", "https://chatbot-healthcare-ui.vercel.app")
+CORS(app, 
+     resources={r"/*": {
+         "origins": cors_origins,
+         "methods": ["GET", "POST", "OPTIONS"],
+         "allow_headers": ["Content-Type", "Authorization"],
+         "supports_credentials": True
+     }})
+
 UPLOAD_FOLDER = "temp"
 AUDIO_CLONE = "static"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -61,6 +71,14 @@ def load_questions():
         questions = [line.strip() for line in f if line.strip()]
     return questions
 
+@app.after_request
+def after_request(response):
+    cors_origins = os.environ.get("CORS_ORIGINS", "https://chatbot-healthcare-ui.vercel.app")
+    response.headers['Access-Control-Allow-Origin'] = cors_origins
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response
 
 @app.route("/ping")
 def ping():
