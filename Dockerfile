@@ -41,6 +41,12 @@ RUN mkdir -p /root/.ollama
 ENV OLLAMA_HOST=0.0.0.0:11434
 ENV OLLAMA_MODELS=/root/.ollama/models
 
+# Download Whisper large-v2 model
+RUN python -c "import whisper; whisper.load_model('large-v2')"
+
+# Download HuggingFace reranker model
+RUN python -c "from langchain_community.cross_encoders import HuggingFaceCrossEncoder; HuggingFaceCrossEncoder(model_name='BAAI/bge-reranker-v2-m3')"
+
 # Start Ollama service temporarily and pull models during build
 RUN ollama serve & \
     OLLAMA_PID=$! && \
