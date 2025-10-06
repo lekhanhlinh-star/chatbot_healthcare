@@ -23,7 +23,7 @@ AUDIO_CLONE = "static"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 #init model here
 print("init model")
-asr_model = whisper.load_model(r"models\whisper_large-v2\large-v2.pt")
+asr_model = whisper.load_model(r"large-v2")
 # device = "cuda" if torch.cuda.is_available() else "cpu"
 # tts = TTS(model_name="tts_models/zh-CN/baker/tacotron2-DDC-GST").to(device)
 cc = OpenCC('s2twp')
