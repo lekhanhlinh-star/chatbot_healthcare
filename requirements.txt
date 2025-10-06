@@ -9,5 +9,4 @@ OpenCC
 edge-tts
 openai-whisper
 flask==3.1.2
-flask-cors
 flask[async]

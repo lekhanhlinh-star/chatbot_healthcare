@@ -1,6 +1,5 @@
 print("Import library")
 from flask import Flask, request, render_template, jsonify
-from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import os
 import whisper
@@ -17,16 +16,6 @@ import time
 print("Finish import")
 myuuid = uuid.uuid4()
 app = Flask(__name__)
-
-# Configure CORS with specific settings to avoid conflicts
-cors_origins = os.environ.get("CORS_ORIGINS", "https://chatbot-healthcare-ui.vercel.app")
-CORS(app, 
-     resources={r"/*": {
-         "origins": cors_origins,
-         "methods": ["GET", "POST", "OPTIONS"],
-         "allow_headers": ["Content-Type", "Authorization"],
-         "supports_credentials": True
-     }})
 
 UPLOAD_FOLDER = "temp"
 AUDIO_CLONE = "static"
@@ -71,9 +60,26 @@ def load_questions():
         questions = [line.strip() for line in f if line.strip()]
     return questions
 
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        cors_origins = os.environ.get("CORS_ORIGINS", "https://chatbot-healthcare-ui.vercel.app")
+        response = jsonify({})
+        response.headers['Access-Control-Allow-Origin'] = cors_origins
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        return response
+
 @app.after_request
 def after_request(response):
     cors_origins = os.environ.get("CORS_ORIGINS", "https://chatbot-healthcare-ui.vercel.app")
+    # Remove any existing CORS headers to prevent duplicates
+    response.headers.pop('Access-Control-Allow-Origin', None)
+    response.headers.pop('Access-Control-Allow-Methods', None)
+    response.headers.pop('Access-Control-Allow-Headers', None)
+    response.headers.pop('Access-Control-Allow-Credentials', None)
+    # Set our CORS headers
     response.headers['Access-Control-Allow-Origin'] = cors_origins
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
