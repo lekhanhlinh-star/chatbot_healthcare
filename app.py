@@ -19,16 +19,13 @@ print("Finish import")
 myuuid = uuid.uuid4()
 app = FastAPI()
 
-# Configure CORS
-cors_origins = os.environ.get("CORS_ORIGINS", "https://chatbot-healthcare-ui.vercel.app")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[cors_origins],
+    allow_origins=["*"],  # hoặc ["https://example.com"]
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-
 UPLOAD_FOLDER = "temp"
 AUDIO_CLONE = "static"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
