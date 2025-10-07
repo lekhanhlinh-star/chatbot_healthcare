@@ -1,6 +1,7 @@
 print("Import library")
-from flask import Flask, request, render_template, jsonify
-from werkzeug.utils import secure_filename
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import os
 import whisper
 import torch
@@ -12,10 +13,21 @@ import edge_tts
 import base64
 import random
 import time
+from typing import Optional
 
 print("Finish import")
 myuuid = uuid.uuid4()
-app = Flask(__name__)
+app = FastAPI()
+
+# Configure CORS
+cors_origins = os.environ.get("CORS_ORIGINS", "https://chatbot-healthcare-ui.vercel.app")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[cors_origins],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+)
 
 UPLOAD_FOLDER = "temp"
 AUDIO_CLONE = "static"
@@ -60,45 +72,29 @@ def load_questions():
         questions = [line.strip() for line in f if line.strip()]
     return questions
 
-@app.before_request
-def handle_preflight():
-    if request.method == "OPTIONS":
-        cors_origins = os.environ.get("CORS_ORIGINS", "https://chatbot-healthcare-ui.vercel.app")
-        response = jsonify({})
-        response.headers['Access-Control-Allow-Origin'] = cors_origins
-        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
-        return response
+@app.get("/ping")
+async def ping():
+    return {"status": "healthy"}
 
-@app.after_request
-def after_request(response):
-    cors_origins = os.environ.get("CORS_ORIGINS", "https://chatbot-healthcare-ui.vercel.app")
-    # Remove any existing CORS headers to prevent duplicates
-    response.headers.pop('Access-Control-Allow-Origin', None)
-    response.headers.pop('Access-Control-Allow-Methods', None)
-    response.headers.pop('Access-Control-Allow-Headers', None)
-    response.headers.pop('Access-Control-Allow-Credentials', None)
-    # Set our CORS headers
-    response.headers['Access-Control-Allow-Origin'] = cors_origins
-    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-    response.headers['Access-Control-Allow-Credentials'] = 'true'
-    return response
+@app.post("/upload")
+async def upload_audio(audio: UploadFile = File(...)):
+    if not audio:
+        raise HTTPException(status_code=400, detail="沒有音訊檔案")
 
-@app.route("/ping")
-def ping():
-    return jsonify({"status": "healthy"}), 200
-
-@app.route("/upload", methods=["POST"])
-def upload_audio():
-    if "audio" not in request.files:
-        return "沒有音訊檔案", 400
-
-    file = request.files["audio"]
-    filename = secure_filename(file.filename)
+    # Secure filename
+    filename = audio.filename
+    if filename:
+        # Remove path components and keep only filename
+        filename = os.path.basename(filename)
+    else:
+        filename = f"audio_{uuid.uuid4()}.wav"
+    
     filepath = os.path.join(UPLOAD_FOLDER, filename)
-    file.save(filepath)
+    
+    # Save uploaded file
+    with open(filepath, "wb") as buffer:
+        content = await audio.read()
+        buffer.write(content)
 
     result = asr_model.transcribe(filepath, language="zh")
     
@@ -107,14 +103,15 @@ def upload_audio():
     answer = cc.convert(result['text'])
     return answer
 
-@app.route("/ask", methods=["POST"])
-async def ask():
-    question = request.form.get("question")
-    role = request.form.get('role', 'unknown')
-    responseWithAudio = request.form.get("responseWithAudio", False)
+@app.post("/ask")
+async def ask(
+    question: str = Form(...),
+    role: Optional[str] = Form("unknown"),
+    responseWithAudio: Optional[str] = Form("false")
+):
     print(f"Question: {question}, Role: {role}, Audio: {responseWithAudio}")
     if not question:
-        return "請輸入問題", 400
+        raise HTTPException(status_code=400, detail="請輸入問題")
 
         # Gọi mô hình để trả lời câu hỏi ở đây
         # ví dụ: answer = my_model.answer(question)
@@ -145,17 +142,16 @@ async def ask():
         audio_base64 = base64.b64encode(audio_data).decode('utf-8')
         end_time = time.time() - start_time
         print("Audio:",end_time)
-        return jsonify({"answer": answer, "audio_base64": audio_base64})
+        return {"answer": answer, "audio_base64": audio_base64}
     else:
-        return jsonify({"answer": answer})
+        return {"answer": answer}
 
 if __name__ == "__main__":
+    import uvicorn
     # Get port from environment variable, default to 5012
     port = int(os.environ.get("PORT", 80))
-    # Health check port can be the same as main port or different
-    health_port = int(os.environ.get("PORT_HEALTH", port))
     
-    print(f"Starting server on port {port}")
-    print(f"Health check endpoint available at port {health_port}/ping")
+    print(f"Starting FastAPI server on port {port}")
+    print(f"Health check endpoint available at /ping")
     
-    app.run(host="0.0.0.0", port=port, debug=True)
+    uvicorn.run(app, host="0.0.0.0", port=port)

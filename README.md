@@ -1,6 +1,6 @@
 # Chatbot Healthcare v2
 
-Hệ thống chatbot chăm sóc sức khỏe sử dụng RAG (Retrieval-Augmented Generation) với Ollama và HuggingFace models.
+Hệ thống chatbot chăm sóc sức khỏe sử dụng RAG (Retrieval-Augmented Generation) với Ollama và HuggingFace models. Backend được xây dựng với **FastAPI** để có hiệu suất cao và API documentation tự động.
 
 ## 🚀 Quick Start
 
@@ -17,7 +17,7 @@ Hệ thống chatbot chăm sóc sức khỏe sử dụng RAG (Retrieval-Augmente
 git clone <your-repo>
 cd chatbot_healthcare_v2
 
-# Build và start services
+# Build và start services với FastAPI
 docker-compose up -d
 
 # Hoặc sử dụng Makefile
@@ -199,6 +199,41 @@ make dev-up
 - `POST /ask` - Chat endpoint
 - `POST /upload` - Audio upload
 - `GET /ping` - Health check
+
+## 🚀 FastAPI Features
+
+### API Documentation
+FastAPI tự động tạo API documentation tại:
+- **Swagger UI**: `http://localhost:80/docs`
+- **ReDoc**: `http://localhost:80/redoc`
+
+### Development Mode
+```bash
+# Chạy trong development mode với auto-reload
+uvicorn app:app --host 0.0.0.0 --port 80 --reload
+
+# Hoặc chạy trực tiếp
+python app.py
+```
+
+### Testing
+```bash
+# Test API endpoints
+python test_app.py
+
+# Hoặc sử dụng curl
+curl -X GET http://localhost:80/ping
+curl -X POST http://localhost:80/ask \
+  -F "question=Hello" \
+  -F "role=doctor" \
+  -F "responseWithAudio=false"
+```
+
+### Performance Benefits
+- **Async/Await**: Hỗ trợ bất đồng bộ native
+- **High Performance**: Nhanh hơn Flask đáng kể
+- **Type Safety**: Validation tự động với Pydantic
+- **Auto Documentation**: OpenAPI/Swagger tự động
 
 ## 🤝 Contributing
 

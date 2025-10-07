@@ -11,5 +11,5 @@ done
 echo "Ollama server is ready!"
 
 # Models are already pulled during build, so we can start the app immediately
-echo "Starting Python application..."
-python app.py
+echo "Starting FastAPI application with uvicorn..."
+uvicorn app:app --host 0.0.0.0 --port ${PORT:-80}
