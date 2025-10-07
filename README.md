@@ -221,6 +221,10 @@ python app.py
 # Test API endpoints
 python test_app.py
 
+# Test CORS configuration
+python test_local_cors.py  # For local testing
+python test_cors.py        # For production testing
+
 # Hoặc sử dụng curl
 curl -X GET http://localhost:80/ping
 curl -X POST http://localhost:80/ask \
@@ -228,6 +232,22 @@ curl -X POST http://localhost:80/ask \
   -F "role=doctor" \
   -F "responseWithAudio=false"
 ```
+
+### CORS Configuration
+Ứng dụng được cấu hình để xử lý CORS một cách tùy chỉnh để tránh duplicate headers:
+
+```bash
+# Kiểm tra CORS headers
+curl -X OPTIONS http://localhost:80/ask \
+  -H "Origin: https://chatbot-healthcare-ui.vercel.app" \
+  -H "Access-Control-Request-Method: POST" \
+  -v
+```
+
+**Troubleshooting CORS:**
+- Lỗi "multiple values '*, *'": Server đã được fix để tránh duplicate headers
+- Kiểm tra environment variable `CORS_ORIGINS` 
+- Sử dụng `test_cors.py` để debug production issues
 
 ### Performance Benefits
 - **Async/Await**: Hỗ trợ bất đồng bộ native

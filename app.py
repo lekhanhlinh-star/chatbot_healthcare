@@ -1,6 +1,5 @@
 print("Import library")
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import os
 import whisper
@@ -19,13 +18,44 @@ print("Finish import")
 myuuid = uuid.uuid4()
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # hoặc ["https://example.com"]
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Configure CORS origins
+cors_origins = os.environ.get("CORS_ORIGINS", "https://chatbot-healthcare-ui.vercel.app")
+# Convert string to list if multiple origins
+if isinstance(cors_origins, str):
+    if "," in cors_origins:
+        cors_origins = [origin.strip() for origin in cors_origins.split(",")]
+    else:
+        cors_origins = [cors_origins]
+
+# Custom CORS middleware to prevent duplicate headers
+@app.middleware("http")
+async def cors_handler(request, call_next):
+    # Handle preflight requests
+    if request.method == "OPTIONS":
+        origin = request.headers.get("origin")
+        if origin in cors_origins:
+            return JSONResponse(
+                content={},
+                headers={
+                    "access-control-allow-origin": origin,
+                    "access-control-allow-credentials": "true",
+                    "access-control-allow-methods": "GET, POST, OPTIONS",
+                    "access-control-allow-headers": "Content-Type, Authorization",
+                }
+            )
+    
+    response = await call_next(request)
+    
+    # Add CORS headers to actual responses
+    origin = request.headers.get("origin")
+    if origin and origin in cors_origins:
+        response.headers["access-control-allow-origin"] = origin
+        response.headers["access-control-allow-credentials"] = "true"
+        response.headers["access-control-allow-methods"] = "GET, POST, OPTIONS"
+        response.headers["access-control-allow-headers"] = "Content-Type, Authorization"
+    
+    return response
+
 UPLOAD_FOLDER = "temp"
 AUDIO_CLONE = "static"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
